@@ -1,6 +1,6 @@
 import socket
 import threading
-import datetime
+from public.utils import generate_timestamp, is_not_ascii
 
 HOST = "127.0.0.1"
 PORT = 4500
@@ -13,13 +13,12 @@ clients = []
 nicknames = []
 
 
-def generate_timestamp():
-    return f"[[{datetime.datetime.now()}]]"
-
-
 def broadcast(message):
+    message = message
+    if is_not_ascii(message):
+        message = message.encode("ascii")
     for client in clients:
-        client.send(message)
+        client.send(f"{generate_timestamp()}:: {message}".encode("ascii"))
 
 
 def handle(client):
@@ -27,8 +26,8 @@ def handle(client):
         try:
             message = client.recv(1024)
             broadcast(message)
-        finally:
-            index = clients.index(clients)
+        except:
+            index = clients.index(client)
             client.close()
             clients.remove(client)
             nickname = nicknames[index]
@@ -36,10 +35,12 @@ def handle(client):
                 f"{generate_timestamp()}{nickname.encode('ascii')} left the room."
             )
             nicknames.remove(nickname)
+            break
 
 
 def recieve():
     while True:
+        print(f"{generate_timestamp()}Server listening on port {PORT}")
         client, address = server.accept()
         print(f"{generate_timestamp()}Connected to {str(address)}")
         client.send("NICKNAME".encode("ascii"))
